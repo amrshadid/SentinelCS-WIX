@@ -17,9 +17,11 @@ class SentinelElement extends HTMLElement {
       if(button?.matches('.theme-toggle')) {
         const theme=this.getAttribute('theme')==='dark'?'light':'dark';
         this.setAttribute('theme',theme);
+        try{localStorage.setItem('sentinel-theme',theme);}catch{}
+        window.dispatchEvent(new CustomEvent('sentinel-theme-sync',{detail:{theme,source:this}}));
         this.dispatchEvent(new CustomEvent('sentinel-theme',{detail:{theme}}));
       } else if(button?.matches('.mobile-toggle')) this.setMenu(!this.shadowRoot.querySelector('.header').classList.contains('menu-open'));
-      else if(button?.matches('.back')) this.dispatchEvent(new CustomEvent('sentinel-top'));
+      else if(button?.matches('.back')){window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});this.dispatchEvent(new CustomEvent('sentinel-top'));}
       else if(button?.matches('[data-demo]') || a?.matches('[data-demo]')) {e.preventDefault();this.navigate('demo');}
       else if(a && a.getAttribute('href')?.startsWith('#')) {e.preventDefault();this.navigate(a.dataset.preview||'home');}
       if(a) this.setMenu(false);
@@ -27,6 +29,21 @@ class SentinelElement extends HTMLElement {
     this.shadowRoot.addEventListener('keydown',e=>{if(e.key==='Escape'){this.setMenu(false);this.shadowRoot.querySelector('.mobile-toggle')?.focus();}},{signal});
     this.resize=new ResizeObserver(()=>this.reportSize());this.resize.observe(this.shell);
     this.shadowRoot.querySelector('.year')?.replaceChildren(String(new Date().getFullYear()));
+    try{const saved=localStorage.getItem('sentinel-theme');if(saved==='dark'||saved==='light')this.setAttribute('theme',saved);}catch{}
+    // Keep header and footer in the same theme: each broadcasts its change, the other follows.
+    window.addEventListener('sentinel-theme-sync',e=>{
+      if(e.detail.source!==this&&this.getAttribute('theme')!==e.detail.theme)this.setAttribute('theme',e.detail.theme);
+    },{signal});
+    // Close the mobile menu on an outside click or when the viewport leaves the mobile layout.
+    document.addEventListener('click',e=>{if(!e.composedPath().includes(this))this.setMenu(false);},{signal});
+    matchMedia('(max-width: 900px)').addEventListener('change',()=>this.setMenu(false),{signal});
+    // The header shrinks to the floating bar after 88px of scrolling and returns near the top.
+    if(header&&this.getAttribute('auto-compact')!=='false'){
+      let compact=false,queued=false;
+      const update=()=>{queued=false;const y=window.scrollY;const next=compact?y>40:y>88;if(next!==compact){compact=next;this.setAttribute('compact',String(compact));}};
+      window.addEventListener('scroll',()=>{if(!queued){queued=true;requestAnimationFrame(update);}},{passive:true,signal});
+      update();
+    }
     this.apply();
     this.dispatchEvent(new CustomEvent('sentinel-ready'));
   }
