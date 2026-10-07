@@ -53,7 +53,7 @@ class SentinelElement extends HTMLElement {
   connectedCallback() {
     if (this.controller) return;
     this.controller = new AbortController();
-    this.isHeader = this.tagName.toLowerCase() === 'sentinel-header';
+    this.isHeader = this.tagName.toLowerCase() !== 'sentinel-footer';
     this.shadowRoot.innerHTML =
       `<style>${FONT_IMPORT}${STYLE}${SHADOW_STYLE}</style><div class="shell">${this.isHeader ? HEADER : FOOTER}</div>`;
     this.shell = this.shadowRoot.querySelector('.shell');
@@ -65,6 +65,7 @@ class SentinelElement extends HTMLElement {
     this.applyConfig();
     this.apply();
     this.dispatchEvent(new CustomEvent('sentinel-ready'));
+    console.info(`SENTINEL: <${this.tagName.toLowerCase()}> connected (${this.isHeader ? 'header' : 'footer'})`);
   }
 
   disconnectedCallback() {
@@ -348,5 +349,5 @@ class SentinelElement extends HTMLElement {
 
 if (!customElements.get('sentinel-header')) customElements.define('sentinel-header', class extends SentinelElement {});
 if (!customElements.get('sentinel-footer')) customElements.define('sentinel-footer', class extends SentinelElement {});
-
+console.info('SENTINEL: loaded sentinel-header, sentinel-footer');
 })();
