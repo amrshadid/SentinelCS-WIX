@@ -64,6 +64,3 @@ const write = (path, text) => {
 };
 
 write('src/public/custom-elements/sentinel-elements.js', bundle(['sentinel-header', 'sentinel-footer']));
-// Wix's default custom element tag renders the header, so an element already placed with the
-// default source works without changing its settings.
-write('src/public/custom-elements/wix-default-custom-element.js', bundle(['wix-default-custom-element']));
