@@ -81,6 +81,26 @@ const CONFIG = {
     document.body.click();
     check('outside click closes the menu', !hs.querySelector('.header').classList.contains('menu-open'));
 
+    // The page may scroll inside a container instead of the window (as Wix pages can)
+    const scroller = document.createElement('div');
+    scroller.id = 'page-scroller';
+    scroller.style.cssText = 'position:absolute;top:0;left:0;width:200px;height:200px;overflow:auto';
+    scroller.innerHTML = '<div style="height:3000px"></div>';
+    document.body.append(scroller);
+    scroller.scrollTop = 500;
+    scroller.dispatchEvent(new Event('scroll'));
+    check('scrolling inside a container makes the header compact', header.getAttribute('compact') === 'true');
+    footer.setAttribute('smooth-scroll', 'false');
+    fs.querySelector('.back').click();
+    check('back to top also scrolls that container', scroller.scrollTop === 0);
+    window.scrollTo(0, 400);
+    fs.querySelector('.back').click();
+    check('back to top scrolls the window', window.scrollY === 0);
+    scroller.dispatchEvent(new Event('scroll'));
+    header.setAttribute('compact', 'false');
+    scroller.remove();
+    footer.removeAttribute('smooth-scroll');
+
     // Theme
     hs.querySelector('.theme-toggle').click();
     check('toggle makes the header dark', header.getAttribute('theme') === 'dark');

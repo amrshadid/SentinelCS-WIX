@@ -35,6 +35,11 @@ const COMPACT_HYSTERESIS_PX = 48; // it expands again this much higher up, so it
 const HEADER_HEIGHT = { desktop: 108, mobile: 92 };
 const MOBILE_QUERY = '(max-width: 900px)';
 
+// Wix pages can scroll inside a container instead of the window; these are checked as well as the
+// element that last reported a scroll.
+const KNOWN_SCROLLERS = ['#SITE_CONTAINER', '#site-root', '#PAGES_CONTAINER'];
+let lastScroller = null;
+
 const prefersReducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // "a\nb" becomes [ "a", <br>, "b" ] so line breaks survive without ever parsing HTML.
@@ -62,6 +67,7 @@ class SentinelElement extends HTMLElement {
     if (this.controller) return;
     this.controller = new AbortController();
     loadFont();
+    console.info(`SENTINEL: <${TAG}> connected, build ${BUILD}`);
     this.isHeader = TAG === 'sentinel-header';
     this.root = this.createRoot();
     this.root.innerHTML =
@@ -125,6 +131,10 @@ class SentinelElement extends HTMLElement {
     this.resizeObserver = new ResizeObserver(() => this.reportSize());
     this.resizeObserver.observe(this.shell);
 
+    document.addEventListener('scroll', (event) => {
+      if (event.target instanceof Element && event.target.scrollTop > 0) lastScroller = event.target;
+    }, { passive: true, capture: true, signal });
+
     if (this.isHeader && this.getAttribute('auto-compact') !== 'false') this.watchScroll(signal);
   }
 
@@ -151,6 +161,7 @@ class SentinelElement extends HTMLElement {
   watchScroll(signal) {
     let compact = false;
     let nested = 0; // scroll position of a scroll container other than the window
+    let reported = false;
     const position = () => Math.max(window.scrollY, document.scrollingElement?.scrollTop || 0, nested);
     const update = () => {
       const enter = Number(this.getAttribute('compact-at')) || COMPACT_ENTER_PX;
@@ -159,14 +170,24 @@ class SentinelElement extends HTMLElement {
       if (next === compact) return;
       compact = next;
       this.setAttribute('compact', String(compact));
+      console.info(`SENTINEL: header ${compact ? 'compact' : 'expanded'} at scroll ${Math.round(y)}px`);
     };
     const onScroll = (event) => {
-      nested = event.target instanceof Element ? event.target.scrollTop : 0;
+      const target = event.target;
+      nested = target instanceof Element ? target.scrollTop : 0;
+      if (!reported) {
+        reported = true;
+        const name = target instanceof Element ? `#${target.id || target.tagName.toLowerCase()}` : 'the window';
+        console.info(`SENTINEL: first scroll seen from ${name} (window ${Math.round(window.scrollY)}px, container ${Math.round(nested)}px)`);
+      }
       update();
     };
     // Capture phase: scroll events from containers do not bubble, so this also sees Wix's own scroller.
     document.addEventListener('scroll', onScroll, { passive: true, capture: true, signal });
     window.addEventListener('scroll', onScroll, { passive: true, signal });
+    // Safety net in case the page scrolls without delivering events to us.
+    const timer = setInterval(update, 150);
+    signal.addEventListener('abort', () => clearInterval(timer));
     update();
   }
 
@@ -177,8 +198,16 @@ class SentinelElement extends HTMLElement {
     this.dispatchEvent(new CustomEvent('sentinel-navigate', { detail: { key, url } }));
   }
 
+  // Scrolls every candidate to the top: the window, the document, the container that last scrolled
+  // and Wix's usual page containers. Only the one that actually scrolls moves.
   backToTop() {
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    const smooth = this.getAttribute('smooth-scroll') !== 'false' && !prefersReducedMotion();
+    const behavior = smooth ? 'smooth' : 'auto';
+    const targets = [
+      window, document.scrollingElement, document.body, lastScroller,
+      ...KNOWN_SCROLLERS.map((selector) => document.querySelector(selector)),
+    ];
+    targets.filter(Boolean).forEach((target) => target.scrollTo?.({ top: 0, behavior }));
     this.dispatchEvent(new CustomEvent('sentinel-top'));
   }
 
