@@ -40,18 +40,38 @@ const CONFIG = {
     const header = document.querySelector('sentinel-header');
     const footer = document.querySelector('sentinel-footer');
     await wait(200);
-    const hs = header.shadowRoot;
-    const fs = footer.shadowRoot;
+    const hs = header.root;
+    const fs = footer.root;
 
     // Skeleton, before any config
     check('both elements render', !!hs.querySelector('.header') && !!fs.querySelector('footer'));
     check('footer year is current', fs.querySelector('.year').textContent === String(new Date().getFullYear()));
     check('header starts expanded', header.getAttribute('compact') !== 'true');
 
-    // Header behaviour
-    header.setAttribute('compact', 'true');
-    check('compact attribute shrinks the header', hs.querySelector('.header').classList.contains('is-compact'));
-    header.setAttribute('compact', 'false');
+    // Header: its own fixed layer, and the scroll behaviour of the reference design
+    check('header draws in a fixed layer on the page', !!header.layer && header.layer.parentElement === document.body && getComputedStyle(header.layer).position === 'fixed');
+    check('header box reserves its height', header.style.height === '108px');
+    window.scrollTo(0, 400);
+    window.dispatchEvent(new Event('scroll'));
+    check('scrolling down makes the header compact', header.getAttribute('compact') === 'true' && hs.querySelector('.header').classList.contains('is-compact'));
+    await wait(900);
+    const bar = hs.querySelector('.header').getBoundingClientRect();
+    check('header stays fixed at the top while scrolled', scrollY > 300 && Math.abs(bar.top - 16) < 2);
+    check('header is what sits at the top of the screen', document.elementFromPoint(innerWidth / 2, 40) === header.layer);
+    check('compact header is centered', Math.abs(hs.querySelector('.header').getBoundingClientRect().left - (innerWidth - hs.querySelector('.header').getBoundingClientRect().right)) < 2);
+    window.scrollTo(0, 60);
+    window.dispatchEvent(new Event('scroll'));
+    check('stays compact in the hysteresis band', header.getAttribute('compact') === 'true');
+    window.scrollTo(0, 0);
+    window.dispatchEvent(new Event('scroll'));
+    check('scrolling back to the top expands it', header.getAttribute('compact') === 'false');
+    header.setAttribute('compact-at', '500');
+    window.scrollTo(0, 400);
+    window.dispatchEvent(new Event('scroll'));
+    check('compact-at setting moves the threshold', header.getAttribute('compact') === 'false');
+    window.scrollTo(0, 0);
+    window.dispatchEvent(new Event('scroll'));
+    header.removeAttribute('compact-at');
     hs.querySelector('.mobile-toggle').click();
     check('mobile menu opens', hs.querySelector('.header').classList.contains('menu-open'));
     check('menu toggle reports expanded', hs.querySelector('.mobile-toggle').getAttribute('aria-expanded') === 'true');
@@ -72,6 +92,15 @@ const CONFIG = {
     await wait(100);
     check('a new element starts in the saved theme', late.getAttribute('theme') === 'dark');
     late.remove();
+    check('removing a header removes its layer', !document.querySelector('.sentinel-header-layer + .sentinel-header-layer') && document.querySelectorAll('.sentinel-header-layer').length === 1);
+
+    // Inline mode stays inside the Wix box
+    const inline = document.createElement('sentinel-header');
+    inline.setAttribute('mode', 'inline');
+    document.body.append(inline);
+    await wait(100);
+    check('mode="inline" keeps the header in the element box', !inline.layer && !!inline.shadowRoot.querySelector('.header'));
+    inline.remove();
 
     // Content from config
     header.setAttribute('current-path', '/one');
@@ -98,6 +127,15 @@ const CONFIG = {
     check('column paragraph and demo link', fs.querySelectorAll('.column')[1].querySelector('p').textContent === 'Paragraph here' && fs.querySelectorAll('.column')[0].querySelectorAll('a')[1].hasAttribute('data-demo'));
     check('product badge from config', fs.querySelector('.product-badge').textContent.includes('PROD') && fs.querySelector('.product-badge').getAttribute('href') === '/prod');
     check('legal text keeps a live year', fs.querySelector('.bottom > span').textContent.includes(String(new Date().getFullYear())) && fs.querySelector('.bottom > span').textContent.includes('Legal B'));
+
+    // Settings typed in the Wix editor win over the CMS content
+    header.setAttribute('cta-label', 'Editor label');
+    header.setAttribute('brand-name', 'Editor brand');
+    await wait(50);
+    check('editor attribute overrides the CMS label', hs.querySelector('.cta .long-label').textContent === 'Editor label');
+    check('editor brand name is applied', hs.querySelector('.brand').getAttribute('aria-label') === 'Editor brand home');
+    header.removeAttribute('cta-label');
+    header.removeAttribute('brand-name');
 
     // Robustness
     header.setAttribute('config', '{not json');

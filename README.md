@@ -36,6 +36,26 @@ In the Wix editor add a **Custom Element** to the header strip, choose the sourc
 `sentinel-header`. Add another to the footer strip with `sentinel-footer.js` and the tag `sentinel-footer`.
 Each file defines exactly one tag. Code cannot place elements for you.
 
+## Settings and controls in Wix
+
+**Editor settings.** Select the element, open **Settings**, and add attributes (name and value). They win over the CMS content.
+
+| Attribute | Element | Effect |
+| --- | --- | --- |
+| `mode` | header | `fixed` (default): the header is drawn in its own layer fixed to the screen, as in the design. `inline`: it stays inside the Wix box. |
+| `compact-at` | header | Scroll distance in pixels where it becomes the floating bar (default 88). |
+| `theme` | both | `light` or `dark`. A visitor's choice is remembered and applies to both elements. |
+| `brand-name`, `home-url` | both | Brand name for accessibility text and the logo link. |
+| `cta-label`, `cta-short-label`, `cta-url` | header | The demo button (the short label is used on narrow screens). |
+| `sign-in-label`, `sign-in-url` | header | The sign-in link. |
+
+**Page code (the controller).** Any element can be driven from Velo, for example `$w('#sentinelHeader').setAttribute('theme', 'dark')`.
+The elements raise events you can handle with `element.on(name, handler)`: `sentinel-navigate` (detail: `key`, `url`),
+`sentinel-theme`, `sentinel-ready`, `sentinel-size`, `sentinel-top`. `public/sentinel-nav.js` already routes
+`sentinel-navigate` and sets the `config` and `current-path` attributes on every element.
+
+The header's box in the editor only reserves its height (108 px, 92 px on mobile); the visible bar is fixed to the screen.
+
 ## Commands
 
 * `npm run build`: regenerate the element file after changing `design/` or `tools/`.
