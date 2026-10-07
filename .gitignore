@@ -4,3 +4,8 @@ node_modules/
 .idea/
 .wix/
 jsconfig.json
+
+# Wix app
+app/node_modules/
+app/.wix/
+app/dist/

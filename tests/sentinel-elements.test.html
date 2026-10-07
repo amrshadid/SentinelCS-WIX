@@ -157,6 +157,20 @@ const CONFIG = {
     header.removeAttribute('cta-label');
     header.removeAttribute('brand-name');
 
+    // List settings and footer settings written by the Wix settings panels
+    header.setAttribute('nav', JSON.stringify([{ label: 'A', url: '/a' }, { label: 'B', url: '/b', newTab: true }]));
+    await wait(50);
+    const panelNav = hs.querySelectorAll('.navigation > a:not(.mobile-extra)');
+    check('menu list setting replaces the menu', panelNav.length === 2 && panelNav[1].target === '_blank');
+    header.removeAttribute('nav');
+    footer.setAttribute('headline', 'Panel headline');
+    footer.setAttribute('columns', JSON.stringify([{ title: 'Only', links: [{ label: 'X', url: '/x' }] }]));
+    await wait(50);
+    check('footer text setting', fs.querySelector('h2').textContent.includes('Panel headline'));
+    check('footer columns setting', fs.querySelectorAll('.column').length === 1 && fs.querySelector('.column h3').textContent === 'Only');
+    footer.removeAttribute('headline');
+    footer.removeAttribute('columns');
+
     // Robustness
     header.setAttribute('config', '{not json');
     check('invalid config is ignored', hs.querySelectorAll('.navigation > a:not(.mobile-extra)').length === 3);

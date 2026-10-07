@@ -46,6 +46,29 @@ const prefersReducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)'
 const withLineBreaks = (text) =>
   text.split('\n').flatMap((line, index) => (index ? [document.createElement('br'), line] : [line]));
 
+// Editor settings: attribute name -> where it lands in the content config. The Wix settings panels
+// write these attributes, so everything the elements say or link to can be edited in the editor.
+const TEXT_SETTINGS = {
+  'brand-name': 'brand.name', 'home-url': 'brand.homeUrl',
+  'sign-in-label': 'header.signIn.label', 'sign-in-url': 'header.signIn.url',
+  'cta-label': 'header.cta.label', 'cta-short-label': 'header.cta.shortLabel', 'cta-url': 'header.cta.url',
+  'tag': 'footer.tag', 'headline': 'footer.headline', 'headline-emphasis': 'footer.headlineEmphasis',
+  'invitation': 'footer.invitation', 'footer-cta-label': 'footer.cta.label', 'footer-cta-url': 'footer.cta.url',
+  'caption': 'footer.caption', 'brand-copy': 'footer.brandCopy',
+  'product-label': 'footer.product.label', 'product-sub': 'footer.product.sub', 'product-url': 'footer.product.url',
+  'legal': 'footer.legal',
+};
+// Attributes holding a JSON list: the header menu and the footer columns.
+const LIST_SETTINGS = { nav: 'header.nav', columns: 'footer.columns' };
+
+function setPath(target, path, value) {
+  const keys = path.split('.');
+  const last = keys.pop();
+  let node = target;
+  keys.forEach((key) => { node = node[key] = { ...node[key] }; });
+  node[last] = value;
+}
+
 // Attributes that only change how the element looks; every other attribute carries content.
 const STATE_ATTRIBUTES = ['theme', 'compact', 'current-path'];
 
@@ -53,8 +76,8 @@ class SentinelElement extends HTMLElement {
   static get observedAttributes() {
     return [
       'theme', 'compact', 'current-path', 'config',
-      // Editor settings (Custom Element -> Settings -> Attributes). They win over the CMS content.
-      'brand-name', 'home-url', 'sign-in-label', 'sign-in-url', 'cta-label', 'cta-short-label', 'cta-url',
+      // Editor settings (the widget's Settings panel, or Custom Element -> Settings -> Attributes).
+      ...Object.keys(TEXT_SETTINGS), ...Object.keys(LIST_SETTINGS),
     ];
   }
 
@@ -250,7 +273,7 @@ class SentinelElement extends HTMLElement {
     toggle?.setAttribute('aria-pressed', String(dark));
     toggle?.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
 
-    const currentPath = this.getAttribute('current-path');
+    const currentPath = this.getAttribute('current-path') || location.pathname;
     this.root.querySelectorAll('a').forEach((link) => {
       if (currentPath && link.getAttribute('href') === currentPath) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
@@ -302,23 +325,28 @@ class SentinelElement extends HTMLElement {
     this.apply();
   }
 
-  // Values typed into the element's Settings -> Attributes panel in the Wix editor.
+  // Values set in the editor win over the `config` attribute (CMS content).
   withEditorSettings(config) {
-    const attr = (name) => this.getAttribute(name) || undefined;
-    const brand = { name: attr('brand-name'), homeUrl: attr('home-url') };
-    const signIn = { label: attr('sign-in-label'), url: attr('sign-in-url') };
-    const cta = { label: attr('cta-label'), shortLabel: attr('cta-short-label'), url: attr('cta-url') };
-    const set = (target, values) => Object.entries(values).forEach(([key, value]) => {
-      if (value !== undefined) target[key] = value;
+    let merged = config;
+    const edit = (path, value) => {
+      merged = merged || {};
+      setPath(merged, path, value);
+    };
+    Object.entries(TEXT_SETTINGS).forEach(([name, path]) => {
+      const value = this.getAttribute(name);
+      if (value) edit(path, value);
     });
-    if (![brand, signIn, cta].some((values) => Object.values(values).some((value) => value !== undefined))) return config;
-
-    const merged = { ...(config || {}) };
-    merged.brand = { ...merged.brand };
-    merged.header = { ...merged.header, signIn: { newTab: true, ...merged.header?.signIn }, cta: { ...merged.header?.cta } };
-    set(merged.brand, brand);
-    set(merged.header.signIn, signIn);
-    set(merged.header.cta, cta);
+    Object.entries(LIST_SETTINGS).forEach(([name, path]) => {
+      try {
+        const list = JSON.parse(this.getAttribute(name) || 'null');
+        if (Array.isArray(list) && list.length) edit(path, list);
+      } catch (error) {
+        // Invalid JSON in the attribute: keep the content as it was.
+      }
+    });
+    if (merged && this.getAttribute('sign-in-url')) {
+      merged.header.signIn = { newTab: true, ...merged.header.signIn };
+    }
     return merged;
   }
 
