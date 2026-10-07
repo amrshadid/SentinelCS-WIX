@@ -1,0 +1,14 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sentinel header and footer: local preview</title>
+<!-- Opens without Wix. Shows the built elements with the default content. Scroll to see the header shrink. -->
+<style>body{margin:0;background:#faf8f3;font:16px 'IBM Plex Sans',sans-serif} .page{height:2200px;padding:140px 8vw;color:#1a1d1f} .page h1{font-size:44px;margin:0 0 12px}</style>
+<sentinel-header id="h" style="position:sticky;top:0;z-index:10"></sentinel-header>
+<div class="page"><h1>Clarity, connected.</h1><p>Scroll down: the header becomes a floating bar. Try the theme button, the mobile width (resize the window under 900px) and the footer links.</p></div>
+<sentinel-footer id="f"></sentinel-footer>
+<script src="../src/public/custom-elements/sentinel-elements.js"></script>
+<script>
+const config = {"brand":{"name":"Sentinel Cloud Service","homeUrl":"/"},"header":{"nav":[{"label":"Product","url":"/#product"},{"label":"Workflow","url":"/#workflow"},{"label":"Deployment","url":"/#deployment"},{"label":"Questions","url":"/#questions"}],"signIn":{"label":"Sign in","url":"https://portal.laminate.nyuad.nyu.edu","newTab":true},"cta":{"label":"Book a demo","shortLabel":"Demo","url":"/get-started"}},"footer":{"tag":"LAMINATE, by Sentinel","headline":"Discover lesions.","headlineEmphasis":"Follow their story.","invitation":"Take a closer look at LAMINATE, together.\nBring your team and your questions.","cta":{"label":"Let’s explore your workflow","url":"/get-started"},"caption":"A conversation shaped around your team.","brandCopy":"Sentinel Cloud Service.\nThe company behind LAMINATE.","product":{"label":"LAMINATE","sub":"Our MRI analysis product","url":"/#product"},"columns":[{"title":"Explore LAMINATE","links":[{"label":"Single timepoint analysis","url":"/#single"},{"label":"Longitudinal analysis","url":"/#longitudinal"},{"label":"Interactive review","url":"/#review"},{"label":"PACS workflow","url":"/#workflow"}]},{"title":"Get connected","links":[{"label":"Book a demo","url":"/get-started","demo":true},{"label":"Talk about pricing","url":"/get-started","demo":true},{"label":"Questions & answers","url":"/#questions"},{"label":"Open the portal","url":"https://portal.laminate.nyuad.nyu.edu","newTab":true}]},{"title":"Built around your workflow","links":[{"label":"Cloud & enterprise options","url":"/#deployment"}],"text":"Cloud hosting with an on-site PACS gateway, or custom deployment using your own infrastructure and GPUs."}],"legal":"Sentinel Cloud Service.\nFor clinicians, hospitals and researchers worldwide."}};
+for (const id of ['h','f']) document.getElementById(id).setAttribute('config', JSON.stringify(config));
+document.getElementById('h').addEventListener('sentinel-navigate', e => console.log('navigate to', e.detail));
+</script>
