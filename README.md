@@ -9,7 +9,7 @@ Work on a branch and merge when it has been checked in the Wix preview.
 | --- | --- |
 | `design/` | The approved header and footer study (`header-footer.html`) and the logo SVGs. Source of truth for markup and CSS. |
 | `tools/sentinel-element.class.js` | Behaviour of `<sentinel-header>` and `<sentinel-footer>`. |
-| `tools/build-sentinel-elements.mjs` | Builds `src/public/custom-elements/sentinel-elements.js` from the two above. Wix loads a custom element as one file, so do not edit the generated file by hand. |
+| `tools/build-sentinel-elements.mjs` | Builds `src/public/custom-elements/sentinel-header.js` and `sentinel-footer.js` from the two above, one self-contained file per element as Wix expects. Do not edit the generated files by hand. |
 | `src/backend/sentinel-config.web.js` | `getChromeConfig()`: the content of the header and footer. |
 | `src/backend/sentinel-defaults.js` | The content shown when the CMS has no rows. |
 | `src/public/sentinel-nav.js` | Connects the elements to Wix: config, signed-in member, current page, navigation. |
@@ -32,8 +32,9 @@ If there are no `header` rows the default navigation is used; the same applies t
 
 ## Placing the elements
 
-In the Wix editor add a **Custom Element** to the header strip and choose the tag `sentinel-header`, and one to the
-footer strip with `sentinel-footer`. Code cannot place elements for you.
+In the Wix editor add a **Custom Element** to the header strip, choose the source `sentinel-header.js` and the tag
+`sentinel-header`. Add another to the footer strip with `sentinel-footer.js` and the tag `sentinel-footer`.
+Each file defines exactly one tag. Code cannot place elements for you.
 
 ## Commands
 

@@ -1,6 +1,6 @@
 // Behaviour of <sentinel-header> and <sentinel-footer>.
-// STYLE, HEADER and FOOTER are generated from design/ by tools/build-sentinel-elements.mjs and
-// are declared above this code in src/public/custom-elements/sentinel-elements.js.
+// STYLE, TEMPLATE and TAG are generated from design/ by tools/build-sentinel-elements.mjs and are
+// declared above this code in each file of src/public/custom-elements/ (one element per file).
 
 const FONT_IMPORT =
   '@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");';
@@ -45,9 +45,9 @@ class SentinelElement extends HTMLElement {
   connectedCallback() {
     if (this.controller) return;
     this.controller = new AbortController();
-    this.isHeader = this.tagName.toLowerCase() !== 'sentinel-footer';
+    this.isHeader = TAG === 'sentinel-header';
     this.shadowRoot.innerHTML =
-      `<style>${FONT_IMPORT}${STYLE}${SHADOW_STYLE}</style><div class="shell">${this.isHeader ? HEADER : FOOTER}</div>`;
+      `<style>${FONT_IMPORT}${STYLE}${SHADOW_STYLE}</style><div class="shell">${TEMPLATE}</div>`;
     this.shell = this.shadowRoot.querySelector('.shell');
     this.arrowIcon = this.shadowRoot.querySelector('.login svg, .column a svg')?.cloneNode(true) || null;
 
