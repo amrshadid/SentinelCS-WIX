@@ -10,22 +10,27 @@ const TEMPLATE="<footer class=\"footer\" id=\"footer\"><div class=\"footer-inner
 // STYLE, TEMPLATE and TAG are generated from design/ by tools/build-sentinel-elements.mjs and are
 // declared above this code in each file of src/public/custom-elements/ (one element per file).
 
-const FONT_IMPORT =
-  '@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");';
+const FONT_URL = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap';
 
-// Layout and theme rules that only exist inside the shadow DOM.
+// Browsers ignore @font-face inside a shadow root, so the font is loaded once on the page itself.
+function loadFont() {
+  if (document.getElementById('sentinel-font')) return;
+  const link = document.createElement('link');
+  link.id = 'sentinel-font';
+  link.rel = 'stylesheet';
+  link.href = FONT_URL;
+  document.head.append(link);
+}
+
+// Rules that only exist inside the shadow DOM. The header keeps the reference design's own CSS
+// (fixed position, floating compact bar, animated width/top/radius); here we only reserve its space.
 const SHADOW_STYLE = `
 :host{display:block;width:100%;font-family:'IBM Plex Sans',sans-serif;color:var(--ink)}
 .shell{font:15px 'IBM Plex Sans',sans-serif}
-.header{position:relative;transform:none;left:auto;top:0;margin:auto}
-.header.is-compact{top:0;margin-top:12px}
+.shell.is-header{min-height:108px}
 .shell.dark{--paper:#0e1112;--surface:#161a1c;--ink:#edeae2;--teal:#5c9a93;--soft:#1e2e2c;--line:#262a2c}
 .navigation a[aria-current="page"]:after{transform:scaleX(1)}
-@media(max-width:900px){
-  .header.menu-open .navigation{position:relative;top:auto;flex-basis:100%;order:3;width:100%;margin-top:8px;box-shadow:none}
-  .header.menu-open{flex-wrap:wrap}
-  .header-brand{margin-right:auto}
-}
+@media(max-width:900px){.shell.is-header{min-height:92px}}
 .footer{min-height:100%}`;
 
 const THEME_KEY = 'sentinel-theme';
@@ -53,10 +58,12 @@ class SentinelElement extends HTMLElement {
   connectedCallback() {
     if (this.controller) return;
     this.controller = new AbortController();
+    loadFont();
     this.isHeader = TAG === 'sentinel-header';
     this.shadowRoot.innerHTML =
-      `<style>${FONT_IMPORT}${STYLE}${SHADOW_STYLE}</style><div class="shell">${TEMPLATE}</div>`;
+      `<style>${STYLE}${SHADOW_STYLE}</style><div class="shell">${TEMPLATE}</div>`;
     this.shell = this.shadowRoot.querySelector('.shell');
+    this.shell.classList.toggle('is-header', this.isHeader);
     this.arrowIcon = this.shadowRoot.querySelector('.login svg, .column a svg')?.cloneNode(true) || null;
 
     this.showYear();
@@ -123,18 +130,26 @@ class SentinelElement extends HTMLElement {
   watchScroll(signal) {
     let compact = false;
     let queued = false;
+    let nested = 0; // scroll position of a scroll container other than the window
+    const position = () => Math.max(window.scrollY, document.scrollingElement?.scrollTop || 0, nested);
     const update = () => {
       queued = false;
-      const next = compact ? window.scrollY > COMPACT_LEAVE_PX : window.scrollY > COMPACT_ENTER_PX;
+      const y = position();
+      const next = compact ? y > COMPACT_LEAVE_PX : y > COMPACT_ENTER_PX;
       if (next === compact) return;
       compact = next;
       this.setAttribute('compact', String(compact));
     };
-    window.addEventListener('scroll', () => {
+    const onScroll = (event) => {
+      const target = event.target;
+      nested = target instanceof Element ? target.scrollTop : 0;
       if (queued) return;
       queued = true;
       requestAnimationFrame(update);
-    }, { passive: true, signal });
+    };
+    // Capture phase: scroll events from containers do not bubble, so this also sees Wix's own scroller.
+    document.addEventListener('scroll', onScroll, { passive: true, capture: true, signal });
+    window.addEventListener('scroll', onScroll, { passive: true, signal });
     update();
   }
 
