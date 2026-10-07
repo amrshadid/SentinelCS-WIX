@@ -1,0 +1,111 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- Run with `npm test`. Loads the built element file and checks it in a real browser. -->
+<sentinel-header></sentinel-header>
+<div style="height:3000px"></div>
+<sentinel-footer></sentinel-footer>
+<pre id="result">RUNNING</pre>
+<script src="../src/public/custom-elements/sentinel-elements.js"></script>
+<script>
+const lines = [];
+const check = (name, passed) => lines.push(`${passed ? 'PASS' : 'FAIL'} ${name}`);
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const CONFIG = {
+  brand: { name: 'Acme Imaging', homeUrl: '/start' },
+  header: {
+    nav: [
+      { label: 'One', url: '/one' },
+      { label: '<img src=x onerror=window.INJECTED=1>', url: '/two' },
+      { label: 'Docs', url: 'https://example.com', newTab: true },
+    ],
+    signIn: { label: 'My account', url: '/account', newTab: false },
+    cta: { label: 'Talk to us', shortLabel: 'Talk', url: '/contact' },
+  },
+  footer: {
+    tag: 'TAG X', headline: 'Head one', headlineEmphasis: 'Head two', invitation: 'Line A\nLine B',
+    cta: { label: 'Go now', url: '/contact' }, caption: 'Cap', brandCopy: 'Brand A\nBrand B',
+    product: { label: 'PROD', sub: 'Sub text', url: '/prod' },
+    columns: [
+      { title: 'Col1', links: [{ label: 'L1', url: '/l1' }, { label: 'L2', url: '/l2', demo: true }] },
+      { title: 'Col2', links: [{ label: 'Out', url: 'https://x.test', newTab: true }], text: 'Paragraph here' },
+    ],
+    legal: 'Legal A\nLegal B',
+  },
+};
+
+(async () => {
+  try {
+    const header = document.querySelector('sentinel-header');
+    const footer = document.querySelector('sentinel-footer');
+    await wait(200);
+    const hs = header.shadowRoot;
+    const fs = footer.shadowRoot;
+
+    // Skeleton, before any config
+    check('both elements render', !!hs.querySelector('.header') && !!fs.querySelector('footer'));
+    check('footer year is current', fs.querySelector('.year').textContent === String(new Date().getFullYear()));
+    check('header starts expanded', header.getAttribute('compact') !== 'true');
+
+    // Header behaviour
+    header.setAttribute('compact', 'true');
+    check('compact attribute shrinks the header', hs.querySelector('.header').classList.contains('is-compact'));
+    header.setAttribute('compact', 'false');
+    hs.querySelector('.mobile-toggle').click();
+    check('mobile menu opens', hs.querySelector('.header').classList.contains('menu-open'));
+    check('menu toggle reports expanded', hs.querySelector('.mobile-toggle').getAttribute('aria-expanded') === 'true');
+    hs.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    check('Escape closes the menu', !hs.querySelector('.header').classList.contains('menu-open'));
+    hs.querySelector('.mobile-toggle').click();
+    document.body.click();
+    check('outside click closes the menu', !hs.querySelector('.header').classList.contains('menu-open'));
+
+    // Theme
+    hs.querySelector('.theme-toggle').click();
+    check('toggle makes the header dark', header.getAttribute('theme') === 'dark');
+    check('footer follows the header theme', footer.getAttribute('theme') === 'dark');
+    check('theme is remembered', localStorage.getItem('sentinel-theme') === 'dark');
+    check('toggle label reflects the theme', hs.querySelector('.theme-toggle').getAttribute('aria-label') === 'Switch to light theme');
+    const late = document.createElement('sentinel-header');
+    document.body.prepend(late);
+    await wait(100);
+    check('a new element starts in the saved theme', late.getAttribute('theme') === 'dark');
+    late.remove();
+
+    // Content from config
+    header.setAttribute('current-path', '/one');
+    header.setAttribute('config', JSON.stringify(CONFIG));
+    footer.setAttribute('config', JSON.stringify(CONFIG));
+    await wait(100);
+    const navLinks = hs.querySelectorAll('.navigation > a:not(.mobile-extra)');
+    check('header nav comes from config', navLinks.length === 3 && navLinks[0].getAttribute('href') === '/one');
+    check('current page is marked', navLinks[0].getAttribute('aria-current') === 'page');
+    check('CMS text cannot inject HTML', !window.INJECTED && !hs.querySelector('.navigation img'));
+    check('markup-like label is shown as text', navLinks[1].textContent.includes('<img'));
+    check('external link opens safely in a new tab', navLinks[2].target === '_blank' && navLinks[2].rel === 'noopener');
+    check('sign-in link from config', hs.querySelector('.login').textContent.trim().startsWith('My account') && hs.querySelector('.login').getAttribute('href') === '/account');
+    check('call-to-action labels', hs.querySelector('.cta .long-label').textContent === 'Talk to us' && hs.querySelector('.cta .short-label').textContent === 'Talk');
+    check('brand name and home link', hs.querySelector('.brand').getAttribute('aria-label') === 'Acme Imaging home' && hs.querySelector('.brand').getAttribute('href') === '/start');
+    let announced = null;
+    header.addEventListener('sentinel-navigate', (event) => { announced = event.detail; });
+    hs.querySelector('.cta').click();
+    check('call to action announces its Wix url', announced && announced.key === 'demo' && announced.url === '/contact');
+
+    check('footer text from config', fs.querySelector('.tag').textContent === 'TAG X' && fs.querySelector('h2 em').textContent === 'Head two');
+    check('footer keeps line breaks', fs.querySelectorAll('.invitation br').length === 1 && fs.querySelectorAll('.brand-copy br').length === 1);
+    check('footer columns come from config', fs.querySelectorAll('.column').length === 2 && fs.querySelector('.column h3').textContent === 'Col1');
+    check('column paragraph and demo link', fs.querySelectorAll('.column')[1].querySelector('p').textContent === 'Paragraph here' && fs.querySelectorAll('.column')[0].querySelectorAll('a')[1].hasAttribute('data-demo'));
+    check('product badge from config', fs.querySelector('.product-badge').textContent.includes('PROD') && fs.querySelector('.product-badge').getAttribute('href') === '/prod');
+    check('legal text keeps a live year', fs.querySelector('.bottom > span').textContent.includes(String(new Date().getFullYear())) && fs.querySelector('.bottom > span').textContent.includes('Legal B'));
+
+    // Robustness
+    header.setAttribute('config', '{not json');
+    check('invalid config is ignored', hs.querySelectorAll('.navigation > a:not(.mobile-extra)').length === 3);
+    header.remove();
+    check('removing an element does not throw', true);
+  } catch (error) {
+    lines.push(`ERROR ${error.message}`);
+  }
+  document.getElementById('result').textContent = `${lines.join('\n')}\nDONE`;
+})();
+</script>

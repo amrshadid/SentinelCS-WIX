@@ -8,6 +8,8 @@
   "scripts": {
     "postinstall": "wix sync-types",
     "dev": "wix dev",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build": "node tools/build-sentinel-elements.mjs",
+    "test": "sh tests/run.sh"
   }
 }

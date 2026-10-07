@@ -1,15 +1,10 @@
-import { testPhoneFormatter } from 'backend/example-test.web';
+// API Reference: https://www.wix.com/velo/reference/api-overview/introduction
+// “Hello, World!” Example: https://learn-code.wix.com/en/article/hello-world
 
-$w.onReady(async function () {
-  $w('#text42').text = 'Sentinel Cloud Service\nRepository test\nFrontend: PASS\nBackend: checking…';
-  console.log('SENTINEL_TEST: frontend running');
-  try {
-    const result = await testPhoneFormatter();
-    if (result.formatted !== result.expected) throw new Error('Unexpected formatter result');
-    $w('#text42').text = 'Sentinel Cloud Service\nRepository test\nFrontend: PASS\nBackend: PASS\n' + result.formatted;
-    console.log('SENTINEL_TEST: backend PASS — ' + result.formatted);
-  } catch (error) {
-    $w('#text42').text = 'Sentinel Cloud Service\nFrontend: PASS\nBackend: FAILED\nSee the developer console.';
-    console.error('SENTINEL_TEST: backend FAIL — ' + error.message);
-  }
+$w.onReady(function () {
+    // Write your JavaScript here
+
+    // To select an element by ID use: $w('#elementID')
+
+    // Click 'Preview' to run your code
 });

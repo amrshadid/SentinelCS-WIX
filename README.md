@@ -1,3 +1,51 @@
+# Sentinel site: header and footer
+
+The Wix site tracks this repository's `main` branch: **a push to `main` changes the connected site.**
+Work on a branch and merge when it has been checked in the Wix preview.
+
+## What lives where
+
+| Path | Purpose |
+| --- | --- |
+| `design/` | The approved header and footer study (`header-footer.html`) and the logo SVGs. Source of truth for markup and CSS. |
+| `tools/sentinel-element.class.js` | Behaviour of `<sentinel-header>` and `<sentinel-footer>`. |
+| `tools/build-sentinel-elements.mjs` | Builds `src/public/custom-elements/sentinel-elements.js` from the two above. Wix loads a custom element as one file, so do not edit the generated file by hand. |
+| `src/backend/sentinel-config.web.js` | `getChromeConfig()`: the content of the header and footer. |
+| `src/backend/sentinel-defaults.js` | The content shown when the CMS has no rows. |
+| `src/public/sentinel-nav.js` | Connects the elements to Wix: config, signed-in member, current page, navigation. |
+| `src/pages/masterPage.js` | Starts `sentinel-nav.js` on every page. |
+| `tests/` | Browser tests for the elements (`npm test`). |
+
+## Editing the content (no code)
+
+Create two collections in the Wix CMS. Both are optional; missing rows fall back to `sentinel-defaults.js`.
+
+**SentinelSettings** (one row; every field is optional text): `brandName`, `homeUrl`, `signInLabel`, `signInUrl`,
+`ctaLabel`, `ctaShortLabel`, `ctaUrl`, `accountLabel`, `accountUrl` (when set, signed-in members see it instead of
+Sign in), `tag`, `headline`, `headlineEmphasis`, `invitation`, `footerCtaLabel`, `caption`, `brandCopy`,
+`productLabel`, `productSub`, `productUrl`, `legal`. Use a new line in `invitation`, `brandCopy` and `legal` for a line break.
+
+**SentinelLinks** (one row per link): `area` (`header` or `footer`), `column` (footer column title), `columnText`
+(optional paragraph under a footer column), `label`, `url` (a page path such as `/vision`, an anchor such as `/#product`,
+or a full URL), `newTab`, `demo` (opens the demo destination), `order`, `visible` (hide with false).
+If there are no `header` rows the default navigation is used; the same applies to `footer`.
+
+## Placing the elements
+
+In the Wix editor add a **Custom Element** to the header strip and choose the tag `sentinel-header`, and one to the
+footer strip with `sentinel-footer`. Code cannot place elements for you.
+
+## Commands
+
+* `npm run build`: regenerate the element file after changing `design/` or `tools/`.
+* `npm test`: run the browser tests (needs Chrome; set `CHROME=/path/to/chrome` if it is not in the default place).
+  The scroll-to-compact header and back-to-top depend on animation frames that headless Chrome does not run:
+  check them in the Wix preview.
+* `npm run lint`: ESLint with the Wix plugin.
+* `npm run dev`: the Wix local editor.
+
+---
+
 # Git Integration & Wix CLI <img align="left" src="https://user-images.githubusercontent.com/89579857/185785022-cab37bf5-26be-4f11-85f0-1fac63c07d3b.png">
 
 This repo is part of Git Integration & Wix CLI, a set of tools that allows you to write, test, and publish code for your Wix site locally on your computer. 
